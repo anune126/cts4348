@@ -1,0 +1,31 @@
+#install epel-release
+#install net-tools
+#install nmap
+
+cat <<'EOF' >> eccron.sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+sudo ip -s -s neigh flush all
+nmap 10.128.2.0/24 > /dev/null
+arp -n | grep ether | awk '{print $1,$3}' > networklist
+while read match;
+do
+mac=$(echo $match | awk '{print $2}')
+result=$(grep $mac networklist | awk '{print $1}')
+if ! [ -z "$result" ]
+then
+ipaddress=$(grep $mac mac-list | awk '{print $1}')
+if [ "$result" != "$ipaddress" ]
+then
+curl --data "mac=$mac" users.cis.fiu.edu/~ggome002/api/ > /dev/null
+echo "$mac has been shut-off for wrong IP"
+fi
+fi
+done < /root/mac-list
+
+> networklist
+
+EOF
+
+chmod 755 eccron.sh 
+echo "*/3 * * * * /root/eccron.sh" > crontab.txt
+crontab crontab.txt
